@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<inkscape-extension 
+    xmlns="http://www.inkscape.org/namespace/inkscape/extension">
+   	 <name>Hachures</name> <!-- Nom friendly de l'extension-->
+    	<id>org.inkscape.hachures</id>	<!-- tag pour stocker (entre autres) les derniers parametres utilisés -->
+    
+    	<!-- FICHIERS LIÉS ================================  -->
+	<dependency type="executable" location="inx">hachures.py</dependency>
+	<dependency type="executable" location="inx">parser.py</dependency>
+	<dependency type="executable" location="inx">path.py</dependency>
+	
+	
+	
+	<!-- ====================================================  -->
+	<!-- INTERFACE GRAPHIQUE ================================  -->
+	<!-- ====================================================  -->
+	
+		<param name="periode_distance" type="float" min="0.01" max="10000"  
+		gui-text="Période des traits (en px) :">10</param>
+		<param name="periode_unite" type="enum" gui-text="Unité :">
+									<item value="mm">mm</item>
+									<item value="px">px</item>
+									<item value="pt">pt</item>
+									<item value="cm">cm</item>
+									<item value="m">m</item>
+									<item value="pc">pc</item>
+									<item value="ft">ft</item>
+		</param>
+		
+		<param name="angle" type="float" min="-360" max="360"  
+		gui-text="Angle (en °) :">45</param>
+	
+	<!-- ====================================================  -->
+	<!-- FIN DE L'INTERFACE GRAPHIQUE =======================  -->
+	<!-- ====================================================  -->
+
+
+	<!-- MENU ================================  -->
+	<effect>
+		<object-type>all</object-type>
+		<effects-menu>
+			<submenu _name="Enseignement"/>
+		</effects-menu>
+	</effect>
+	
+	
+	<!-- EXECUTION ================================  -->
+	<script>
+		<command location="inx" interpreter="python">hachures.py</command>
+	</script>
+</inkscape-extension>
+
