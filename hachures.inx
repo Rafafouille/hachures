@@ -69,7 +69,7 @@
 		                <param name="espace_aluminium" type="float" min="0.01" max="100" gui-text="Espace entre deux hachures proches (%) :">25</param>
 		            </page>
 		            <page name="plastique" gui-text="Matière plastique">
-		                <hbox><image>images/alu.svg</image>
+		                <hbox><image>images/plastique.svg</image>
 		                    <vbox>
 		                        <label>La valeur ci-dessous est donnée en pourcentage de la période des hachures.</label>
 		                    </vbox>

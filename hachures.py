@@ -134,6 +134,32 @@ class Hachures(inkex.EffectExtension):
                 objetCheminHachure = PathElement.new(self.HACHURES_SORTIE)
                 objetCheminHachure.style = self.style
                 layer.add(objetCheminHachure)
+            # PLASTIQUE ===========================================
+            elif(self.options.type_materiau == "plastique"):
+                # Partie "horizontales"
+                for Y in np.arange(Ymin,Ymax+self.options.periode,self.options.periode):
+                    P1 = self.ex*Xmin+self.ey*Y
+                    P2 = self.ex*Xmax+self.ey*Y
+                    listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
+                    self.traceHachureEntreIntersections(self.HACHURES_SORTIE,listeIntersections)
+                # NOUVEAU THETA
+                self.theta -= self.options.angle_plastique * math.pi/180
+                # NOUVEAU REPERE
+                self.ex = np.array([math.cos(self.theta),math.sin(self.theta)]) # Axe parallele aux hachures
+                self.ey = np.array([-math.sin(self.theta),math.cos(self.theta)]) # Axe perpendiculare aux hachures
+                # NOUVEAU BOUNDING BOX (reprend les lignes avant les ifs)
+                Ymin,Ymax = self.getYminYmax(cheminSelection)
+                Xmin,Xmax = self.getXminXmax(cheminSelection)
+                Ymin += self.options.offset % self.options.periode
+                Ymax += self.options.offset % self.options.periode
+                for Y in np.arange(Ymin,Ymax+self.options.periode,self.options.periode):
+                    P1 = self.ex*Xmin+self.ey*Y
+                    P2 = self.ex*Xmax+self.ey*Y
+                    listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
+                    self.traceHachureEntreIntersections(self.HACHURES_SORTIE,listeIntersections)
+                objetCheminHachure = PathElement.new(self.HACHURES_SORTIE)
+                objetCheminHachure.style = self.style
+                layer.add(objetCheminHachure)
 
         
     # =====================================================
