@@ -49,7 +49,15 @@ class Hachures(inkex.EffectExtension):
         # Éléments utiles ---------------------------
         svg = self.svg # Ref vers l'objet dessin entier
         layer = self.svg.get_current_layer()	# Calque courant
-        selection = self.options.ids	# Liste des éléments sélectionnés
+        selection = [svg.getElementById(self.options.ids[i]).to_path_element() for i in range(len(self.options.ids))]	# Liste des éléments sélectionnés 
+        
+        # Fusion des figures
+        if(self.options.groupe_figure == "combo"):
+            while len(selection)>1:
+                selection[0].attrib["d"] += " "+selection[-1].attrib["d"]
+                selection.pop(-1)
+                
+        
         
         self.style = {'fill' : 'none', 'stroke' : self.options.couleur,'stroke-width' : str(self.options.epaisseur), 'stroke-linecap':'round'} # Style par defaut
         self.style_tirets_bronze = {'fill' : 'none', 'stroke' : self.options.couleur,'stroke-width' : str(self.options.epaisseur), 'stroke-linecap':'butt', 'stroke-dasharray':str(0.01*self.options.longueur_tiret_cuivre*self.options.periode)+","+str(0.01*self.options.longueur_espace_cuivre*self.options.periode)} # Style par defaut
@@ -57,6 +65,7 @@ class Hachures(inkex.EffectExtension):
         
         self.DEBUG = False # Pour moi...
         
+
 
 
         self.theta = -self.options.angle * math.pi/180 # Angle inclinaison hachure (par rapport à l'horizontale)
@@ -76,8 +85,7 @@ class Hachures(inkex.EffectExtension):
 
         # Pour chaque figure ,on fait les hachures
         for i in range(len(selection)): # Pour chaque objet sélectionné
-            elementSelection = svg.getElementById(selection[i])
-            cheminSelection = elementSelection.to_path_element()
+            cheminSelection = selection[i]#elementSelection.to_path_element()
 
             # On cherche la place qu'il prend (rectangle bounding box)
             Ymin,Ymax = self.getYminYmax(cheminSelection)

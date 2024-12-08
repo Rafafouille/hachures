@@ -19,8 +19,8 @@
 		
 		    <param name="parametres_generaux" type="notebook">
 		        <page name="parametres_dimensions" gui-text="Dimensions">
-    		        <param name="periode" type="float" min="0.01" max="10000" gui-text="Période d'espacement des hachures principales :">5</param>
-    		        <param name="offset" type="float" min="0.01" max="10000" gui-text="Décalage :">0</param>
+    		        <param name="periode" type="float" min="0.01" max="10000" precision="2" gui-text="Période d'espacement des hachures principales :">5</param>
+    		        <param name="offset" type="float" min="-1000" max="1000" precision="2" gui-text="Décalage :">0</param>
 		            <param name="periode_unite" type="enum" gui-text="Unité (pour tout) :">
 									        <item value="mm">mm</item>
 									        <item value="px">px</item>
@@ -30,10 +30,10 @@
 									        <item value="pc">pc</item>
 									        <item value="ft">ft</item>
 		            </param>
-    		        <param name="angle" type="float" min="-360" max="360" gui-text="orientation (en °) :">45</param>
+    		        <param name="angle" type="float" min="-360" max="360" precision="0" gui-text="orientation (en °) :">45</param>
 		        </page>
 		        <page name="parametres_apparence" gui-text="Apparence">
-		            <param name="epaisseur" type="float" min="0.01" max="10000" gui-text="Épaisseur :">0.25</param>
+		            <param name="epaisseur" type="float" min="0.01" max="10000" precision="2" gui-text="Épaisseur :">0.25</param>
 		            <param name="couleur" type="color" gui-text="Couleur des traits"  appearance="colorbutton">255</param>
 		        </page>
 		        <page name="parametres_autres" gui-text="Autre options">
@@ -57,8 +57,8 @@
 		                        <label>Les valeurs ci-dessous sont données en pourcentage de l'espace entre les hachures continues.</label>
 		                    </vbox>
 		                </hbox>
-                        <param name="longueur_tiret_cuivre" type="float" min="0.01" max="100" gui-text="Longueur tiret (%) :">50</param>
-                        <param name="longueur_espace_cuivre" type="float" min="0.01" max="100" gui-text="Longueur espaces (%) :">50</param>
+                        <param name="longueur_tiret_cuivre" type="float" min="0.01" max="100" precision="2" gui-text="Longueur tiret (%) :">50</param>
+                        <param name="longueur_espace_cuivre" type="float" min="0.01" max="100" precision="2" gui-text="Longueur espaces (%) :">50</param>
 		            </page>
 		            <page name="aluminium" gui-text="Alliages légers (Aluminium)">
 		                <hbox><image>images/alu.svg</image>
@@ -66,7 +66,7 @@
 		                        <label>La valeur ci-dessous est donnée en pourcentage de la période des hachures.</label>
 		                    </vbox>
 		                </hbox>
-		                <param name="espace_aluminium" type="float" min="0.01" max="100" gui-text="Espace entre deux hachures proches (%) :">25</param>
+		                <param name="espace_aluminium" type="float" min="0.01" max="100" precision="2" gui-text="Espace entre deux hachures proches (%) :">25</param>
 		            </page>
 		            <page name="plastique" gui-text="Matière plastique">
 		                <hbox><image>images/plastique.svg</image>
@@ -74,7 +74,7 @@
 		                        <label>La valeur ci-dessous est donnée en pourcentage de la période des hachures.</label>
 		                    </vbox>
 		                </hbox>
-		                <param name="angle_plastique" type="float" min="0.01" max="90" gui-text="Angle entre les hachures (°) :">45</param>
+		                <param name="angle_plastique" type="float" min="0.01" max="90" precision="0" gui-text="Angle entre les hachures (°) :">45</param>
 		            </page>
 		        </param>
 	
