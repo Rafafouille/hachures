@@ -3,10 +3,13 @@ from math import acos, asin, cos, pi, sin, sqrt
 
 import inkex
 from inkex import TextElement, Line
+import inkex.paths as ip
 from inkex.utils import debug
+from inkex import Path, PathElement
 
 import numpy as np
 import math
+
 
 from svg.path import parse_path
 
@@ -17,15 +20,22 @@ class Hachures(inkex.EffectExtension):
     	# On récupère la liste des dessins sélectionnés
         #self.arg_parser.add_argument("--id", action="append", type=str, dest="ids", default=[], help="id attribute of object to manipulate")
         
-
-        
     	# On résupère les parametres
-        pars.add_argument("--periode_distance", type=float, default=10.0, 
-            help="Période d'espacement des hachures")
-        pars.add_argument("--periode_unite", type=str, default="mm", 
-            help="Période d'espacement des hachures")
-        pars.add_argument("--angle", type=float, default=45.0,  
-            help="Angle des hachures")
+    	# Parametres communs
+        pars.add_argument("--periode", type=float, default=5.0, help="Période d'espacement des hachures principales")
+        pars.add_argument("--offset", type=float, default=0.0, help="Décallage des hachures")
+        pars.add_argument("--periode_unite", type=str, default="mm", help="Unité des longueurs")
+        pars.add_argument("--angle", type=float, default=45.0, help="Orientation des hachures")
+        pars.add_argument("--epaisseur", type=float, default=0.25, help="Épaisseur du trait")
+        pars.add_argument("--couleur", type=int, default=0, help="Couleur des lignes")
+        pars.add_argument("--parametres_generaux", type=str, default="parametre_dimensions", help="Onglet des paramètres généraux")
+        pars.add_argument("--groupe_figure", type=str, default="combo", help="Type de groupement des hachures")
+        
+        pars.add_argument("--type_materiau", type=str, default="acier", help="Type de hachures")
+        pars.add_argument("--longueur_tiret_cuivre", type=float, default=50, help="Pourcentage longueur tiret")
+        pars.add_argument("--longueur_espace_cuivre", type=float, default=50, help="Pourcentage longueur espace entre tirets")
+        pars.add_argument("--espace_aluminium", type=float, default=50, help="Pourcentage d'esapce espace entre hachures proches")
+        pars.add_argument("--angle_plastique", type=float, default=45, help="Angle les hachures du plastique")
         
         
     # =====================================================
@@ -33,14 +43,27 @@ class Hachures(inkex.EffectExtension):
     # =====================================================
     def effect(self): # Fonction qui "modifie" le code SVG
     
+        #Conversion des couleurs dans un format correct
+        self.options.couleur = self.convertIntColor2Hex(self.options.couleur)
+    
         # Éléments utiles ---------------------------
+        svg = self.svg # Ref vers l'objet dessin entier
         layer = self.svg.get_current_layer()	# Calque courant
         selection = self.options.ids	# Liste des éléments sélectionnés
-        self.style = {'fill' : 'none', 'stroke' : '#000000','stroke-width' : '0.264583'} # Style par defaut
-        svg = self.svg # Ref vers l'objet dessin entier
-        self.DEBUG = True # Pour moi...
+        
+        self.style = {'fill' : 'none', 'stroke' : self.options.couleur,'stroke-width' : str(self.options.epaisseur), 'stroke-linecap':'round'} # Style par defaut
+        self.style_tirets_bronze = {'fill' : 'none', 'stroke' : self.options.couleur,'stroke-width' : str(self.options.epaisseur), 'stroke-linecap':'butt', 'stroke-dasharray':str(0.01*self.options.longueur_tiret_cuivre*self.options.periode)+","+str(0.01*self.options.longueur_espace_cuivre*self.options.periode)} # Style par defaut
+        
+        
+        self.DEBUG = False # Pour moi...
+        
 
-        self.theta = self.options.angle * math.pi/180 # Angle inclinaison hachure (par rapport à l'horizontale)
+
+        self.theta = -self.options.angle * math.pi/180 # Angle inclinaison hachure (par rapport à l'horizontale)
+        
+        #Liste des chemins finaux qui constitueront les hachures
+        self.HACHURES_SORTIE = Path()
+        self.HACHURES_SORTIE2 = Path()
 
         # Création du repère penché -------------------------------
         self.ex = np.array([math.cos(self.theta),math.sin(self.theta)]) # Axe parallele aux hachures
@@ -53,26 +76,64 @@ class Hachures(inkex.EffectExtension):
 
         # Pour chaque figure ,on fait les hachures
         for i in range(len(selection)): # Pour chaque objet sélectionné
-            self.debug("Section "+str(i))
-            element = svg.getElementById(selection[i])
-            chemin = element.to_path_element()
+            elementSelection = svg.getElementById(selection[i])
+            cheminSelection = elementSelection.to_path_element()
 
             # On cherche la place qu'il prend (rectangle bounding box)
-            Ymin,Ymax = self.getYminYmax(chemin)
-            Xmin,Xmax = self.getXminXmax(chemin)
+            Ymin,Ymax = self.getYminYmax(cheminSelection)
+            Xmin,Xmax = self.getXminXmax(cheminSelection)
+            
+            # Prise en compte de l'offset
+            Ymin += self.options.offset % self.options.periode
+            Ymax += self.options.offset % self.options.periode
 
-           
+            objetCheminSelection = parse_path(cheminSelection.get_path())
             
-            objetChemin = parse_path(chemin.get_path())
-            self.debug(objetChemin)
-            
-            for Y in np.arange(Ymin,Ymax+self.options.periode_distance,self.options.periode_distance):
-                self.debug("      - Nouvelle hachure")
-                P1 = self.ex*Xmin+self.ey*Y
-                P2 = self.ex*Xmax+self.ey*Y
-                listeIntersections = self.getIntersections(P1,P2,objetChemin)
-                self.traceHachureEntreIntersections(layer,listeIntersections)
-                #layer.add(self.traceHachure(P1[0],P1[1],P2[0],P2[1]))
+            # DESSIN ACIER =========================================
+            if(self.options.type_materiau == "acier"):
+                for Y in np.arange(Ymin,Ymax+self.options.periode,self.options.periode):
+                    P1 = self.ex*Xmin+self.ey*Y
+                    P2 = self.ex*Xmax+self.ey*Y
+                    listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
+                    self.traceHachureEntreIntersections(self.HACHURES_SORTIE,listeIntersections)
+                objetCheminHachure = PathElement.new(self.HACHURES_SORTIE)
+                objetCheminHachure.style = self.style
+                layer.add(objetCheminHachure)
+            # DESSIN BRONZE ===========================================
+            elif(self.options.type_materiau == "bronze"):
+                for Y in np.arange(Ymin,Ymax+self.options.periode,self.options.periode):
+                    # Trait plein
+                    P1 = self.ex*Xmin+self.ey*Y
+                    P2 = self.ex*Xmax+self.ey*Y
+                    listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
+                    self.traceHachureEntreIntersections(self.HACHURES_SORTIE,listeIntersections)
+                    # Poitillés
+                    P1 = self.ex*Xmin+self.ey*(Y+self.options.periode/2.)
+                    P2 = self.ex*Xmax+self.ey*(Y+self.options.periode/2.)
+                    listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
+                    self.traceHachureEntreIntersections(self.HACHURES_SORTIE2,listeIntersections)
+                objetCheminHachure = PathElement.new(self.HACHURES_SORTIE)
+                objetCheminHachure.style = self.style
+                layer.add(objetCheminHachure)
+                objetCheminHachure2 = PathElement.new(self.HACHURES_SORTIE2)
+                objetCheminHachure2.style = self.style_tirets_bronze
+                layer.add(objetCheminHachure2)
+            # DESSIN ALU ===========================================
+            elif(self.options.type_materiau == "aluminium"):
+                for Y in np.arange(Ymin,Ymax+self.options.periode,self.options.periode):
+                    # Trait plein
+                    P1 = self.ex*Xmin+self.ey*Y
+                    P2 = self.ex*Xmax+self.ey*Y
+                    listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
+                    self.traceHachureEntreIntersections(self.HACHURES_SORTIE,listeIntersections)
+                    # Poitillés
+                    P1 = self.ex*Xmin+self.ey*(Y+self.options.periode*self.options.espace_aluminium/100.*self.options.periode)
+                    P2 = self.ex*Xmax+self.ey*(Y+self.options.periode*self.options.espace_aluminium/100.*self.options.periode)
+                    listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
+                    self.traceHachureEntreIntersections(self.HACHURES_SORTIE,listeIntersections)
+                objetCheminHachure = PathElement.new(self.HACHURES_SORTIE)
+                objetCheminHachure.style = self.style
+                layer.add(objetCheminHachure)
 
         
     # =====================================================
@@ -138,8 +199,8 @@ class Hachures(inkex.EffectExtension):
             if(proj>yMax):
                 yMax=proj
                 
-        yMin = (yMin//self.options.periode_distance)*self.options.periode_distance # Décallage (pour être sûr de démarrer AVANT et finir APRES la figure)
-        yMax = (yMax//self.options.periode_distance+1)*self.options.periode_distance
+        yMin = (yMin//self.options.periode)*self.options.periode # Décallage (pour être sûr de démarrer AVANT et finir APRES la figure)
+        yMax = (yMax//self.options.periode+1)*self.options.periode
         return (yMin,yMax)
         
     def getXminXmax(self,chemin):
@@ -164,88 +225,31 @@ class Hachures(inkex.EffectExtension):
                 xMax=proj
         xMin -= 1 # Pour dépasser un peu (et être sûr d'avoir les intersections avec les bords)
         xMax += 1 
-        return (xMin,xMax)
-          
-          
-          
-#    def explosePath(self,path):
-#        decoupe = path.split(" ")
-#        liste_de_chemins = [] # Liste qui contiendra les points de chaque chemin (s'il y a plusieurs chemins...)
-#        chemin = [] # Un chemin
-#        liste_de_chemins.append(chemin)
-#
-#        for i in range(len(decoupe)):
-#            if decoupe[i] in ["m" , "M" ] : # Si on a bougé sans tracer
-#                chemin=[[decoupe[i],float(decoupe[i+1]),float(decoupe[i+2])]]
-#                liste_de_chemins.append(chemin) # On range le précédent chemin
-#                i+=2
-#            elif decoupe[i] in ["l" ,"L"]:
-#                chemin.append([decoupe[i],float(decoupe[i+1]),float(decoupe[i+2])])
-#                i+=1
-#            elif decoupe[i] in ["h","H"]:
-#               chemin.append([decoupe[i],chemin[-2],float(decoupe[i+1])])
-#               i+=1
-#            elif decoupe[i] in ["v","V"]:
-#               chemin.append([decoupe[i],float(decoupe[i+1]),chemin[-2]])
-#               i+=1
-#            elif decoupe[i] in ["z","Z"]:
-#                chemin.append(chemin[0])
-#                i+=1
-#            elif decoupe[i] in ["c","C"]:
-#                chemin.append([decoupe[i],float(decoupe[i+1]), float(decoupe[i+2]), float(decoupe[i+5]), float(decoupe[i+6]) ])
-#                chemin.append([decoupe[i],float(decoupe[i+3]), float(decoupe[i+4])])
-#                i+=6
-#            
-#            if liste_de_chemins[0]==[]:
-#                liste_de_chemins.pop(0)
-#            
-#        return liste_de_chemins
- 
+        return (xMin,xMax) 
  
  
     def getIntersections(self,P1,P2,objetPath):
         intersections = []
         for troncon in objetPath: # Pour chaque troncon, selon ce que c'est (Ligne, Bezier, etc.)
-            debug("   - nouveau troncon !!!!!!!!!!"+str(troncon))
+            #debug("   - nouveau troncon !!!!!!!!!!"+str(troncon))
             if(type(troncon).__name__ in ["Line","Close","Arc", "QuadraticBezier"]):
-                debug("      - Ligne")
+                #debug("      - Ligne")
                 PA = np.array([troncon.start.real, troncon.start.imag])
                 PB = np.array([troncon.end.real, troncon.end.imag])
-                if(self.seCroisent(P1,P2,PA,PB)):
-                    intersections.append(self.getIntersection(P1,P2,PA,PB))
-                    debug("         --> trouvé ")
+                if(self.seCroisentLignes(P1,P2,PA,PB)):
+                    intersections.append(self.getIntersectionLignes(P1,P2,PA,PB))
+                    #debug("         --> trouvé ")
             elif(type(troncon).__name__ == "CubicBezier"):
-                debug("      - Bezier")
-                # equation de la droite : ax+by=d
-                normale = np.array([[0,-1],[1,0]])@ np.transpose(P2-P1)
-                normale = normale/np.linalg.norm(normale)
-                a,b = normale
-                d = np.dot(P1,normale)
-                #Résolution intersection bezier
-                #https://math.stackexchange.com/questions/2347733/intersections-between-a-cubic-b%C3%A9zier-curve-and-a-line
+                #debug("      - Bezier")
+                
                 P_0 = np.array([troncon.start.real,troncon.start.imag])
                 P_1 = np.array([troncon.control1.real,troncon.control1.imag])
                 P_2 = np.array([troncon.control2.real,troncon.control2.imag])
                 P_3 = np.array([troncon.end.real,troncon.end.imag])
-                f = lambda t:(1-t)**3*(a*P_0[0]+b*P_0[1]) + 3*t*(1-t)**2*(a*P_1[0]+b*P_1[1]) + 3*t**2*(1-t)*(a*P_2[0]+b*P_2[1]) + t**3*(a*P_3[0]+b*P_3[1])-d
-                #dichotomie
-                tmin=-0.2
-                tmax=1.2
-                tmid = 0.5*(tmin+tmax)
-                while abs(tmin-tmax)>0.001:
-                    if f(tmid)*f(tmin)>0:
-                        tmin=tmid
-                    else:
-                        tmax=tmid
-                    tmid = 0.5*(tmin+tmax)
-                    #debug(tmid)
-                if(tmid>=0 and tmid<=1):   # Si on est dans la courbe de Bezier (dans [0,1])
-                    intersections.append((1-tmid)**3*P_0 + 3*tmid*(1-tmid)**2*P_1 + 3*tmid**2*(1-tmid)*P_2 + tmid**3*P_3)
-                    debug("        -> trouvé ")
-                
-        debug(intersections)
+                # Méthode 1
+                intersections = intersections+self.getIntersectionsBezierCubic(P1,P2,P_0,P_1,P_2,P_3)
                     
-        # On tri les intersection
+        # On tri les intersections par ordre de distance à l'origine parallèlement aux hachures
         for i in range(len(intersections)-1):
             for j in range(len(intersections)-1):
                 if(self.distanceALorigineParallelementHachure(intersections[j]) > self.distanceALorigineParallelementHachure(intersections[j+1])):
@@ -257,33 +261,131 @@ class Hachures(inkex.EffectExtension):
 
                     
     
-    def seCroisent(self,P1,P2,PA,PB): # Ce qu'il y a près le "and" n'est peut être pas obligatoire (si les hachures prolongent à l'infini
+    def seCroisentLignes(self,P1,P2,PA,PB): # Ce qu'il y a près le "and" n'est peut être pas obligatoire (si les hachures prolongent à l'infini
         #P1 et P2 = extrémités max de la hachure.
         # PA et PB = extremités du segment
+
         if(np.cross((P2-P1),(PA-PB))==0):
             return False
         return (np.cross((P1-P2),(PA-P1))*np.cross((P1-P2),(PB-P1))<0) #and (np.cross((PB-PA),(P2-PA))*np.cross((PB-PA),(P1-PA))<0)
       
-    def getIntersection(self,P1,P2,PA,PB):
+    def getIntersectionLignes(self,P1,P2,PA,PB):
         # Résultat du système : P1C ^ P1P2 = 0 et PAC ^ PAPB = 0
         x1,y1,x2,y2 = P1[0],P1[1] , P2[0],P2[1]
         xA,yA,xB,yB = PA[0],PA[1] , PB[0],PB[1]
         
+        if((yB-yA)*(x2-x1))-((y2-y1)*(xB-xA))==0: # Si parallèles
+            return None
+            
         yC = (-x1*(y2-y1)*(yB-yA)+y1*(x2-x1)*(yB-yA)+xA*(yB-yA)*(y2-y1)-yA*(xB-xA)*(y2-y1))/((x2-x1)*(yB-yA)-(xB-xA)*(y2-y1))
-        xC = (yC*(xB-xA)+xA*(yB-yA)-yA*(xB-xA))/(yB-yA)
+        xC = (x1*(y2-y1)*(xB-xA)-xA*(yB-yA)*(x2-x1)-y1*(x2-x1)*(xB-xA)+yA*(xB-xA)*(x2-x1))/(-(x2-x1)*(yB-yA)+(xB-xA)*(y2-y1))
         return np.array([xC,yC])
         
         
     # Fonction qui trace les hachures, une intersection sur deux
-    def traceHachureEntreIntersections(self,layer,inter):
+    def traceHachureEntreIntersections(self,cheminHachures,inter):
         if(len(inter)>1):
             for i in range(0,len(inter),2):
                 if(i < len(inter)-1):
                     P1 = inter[i]
                     P2 = inter[i+1]
-                    layer.add(self.traceHachure(P1[0],P1[1],P2[0],P2[1]))
+                    cheminHachures.append(ip.Move(P1[0],P1[1]))
+                    cheminHachures.append(ip.Line(P2[0],P2[1]))
                     
                     
                     
+                    
+                    
+    # Fonction qui renvoie la liste des points intersection entre la droite (P1,P2) et
+    # la courbe de bezier cubique de points de controle P_i
+    def getIntersectionsBezierCubic(self,P1,P2,P_0,P_1,P_2,P_3):
+        #https://math.stackexchange.com/questions/2347733/intersections-between-a-cubic-b%C3%A9zier-curve-and-a-line
+        intersec = []
+    
+        # Coef de l'equation de la droite (P1,P2)
+        # equation de la droite : ax+by=d
+        normale = np.array([[0,-1],[1,0]])@ np.transpose(P2-P1)
+        normale = normale/np.linalg.norm(normale)
+        a,b = normale
+        d = np.dot(P1,normale)
+                  
+        # On cherche les racines de At³+Bt²+Ct+D=0
+        A = -(a*P_0[0]+b*P_0[1]) + 3*(a*P_1[0]+b*P_1[1]) - 3*(a*P_2[0]+b*P_2[1]) + (a*P_3[0]+b*P_3[1])
+        B = 3*(a*P_0[0]+b*P_0[1]) - 6 * (a*P_1[0]+b*P_1[1]) + 3*(a*P_2[0]+b*P_2[1])
+        C = -3*(a*P_0[0]+b*P_0[1]) + 3*(a*P_1[0]+b*P_1[1])
+        D = (a*P_0[0]+b*P_0[1]) - d
+        
+        #https://github.com/shril/CubicEquationSolver/blob/master/CubicEquationSolver.py
+        # SI DEGRE 1
+        if (A == 0 and B == 0):                     # Case for handling Liner Equation
+            solutions = [(-D * 1.0) / C]                 # Returning linear root as numpy array.
+        # SI DEGRE 2
+        elif (A == 0):                              # Case for handling Quadratic Equations
+            Delta = C**2 - 4.0 * B * D                       # Helper Temporary Variable
+            if Delta > 0:
+                x1 = (-C + sqrt(Delta)) / (2.0 * B)
+                x2 = (-C - sqrt(Delta)) / (2.0 * B)
+            #else: #Rien si solution double ou aucune
+
+            solutions = [x1, x2]               # Returning Quadratic Roots as numpy array.
+        else :
+            f = ((3.0 * C / A) - ((B ** 2.0) / (A ** 2.0))) / 3.0
+            g = (((2.0 * (B ** 3.0)) / (A ** 3.0)) - ((9.0 * B * C) / (A **2.0)) + (27.0 * D / A)) /27.0
+            h = ((g ** 2.0) / 4.0 + (f ** 3.0) / 27.0)
+            
+            if f == 0 and g == 0 and h == 0:            # All 3 Roots are Real and Equal
+                #debug("Solution triple")
+                # On a 3 racine identique, mais on en prend qu'une (c'est comme si la hachure rentrait, resortait et rerentrait au même point)
+                if (D / A) >= 0:
+                    solutions = [ (D / (1.0 * A)) ** (1 / 3.0) * -1 ]
+                else:
+                    solutions = [ (-D / (1.0 * A)) ** (1 / 3.0) ]
+            elif h <= 0:                                # All 3 roots are Real
+                #debug("3 Solutions reelles")
+                i = math.sqrt(((g ** 2.0) / 4.0) - h)   # Helper Temporary Variable
+                j = i ** (1 / 3.0)                      # Helper Temporary Variable
+                k = acos(-(g / (2 * i)))                # Helper Temporary Variable
+                L = j * -1                              # Helper Temporary Variable
+                M = cos(k / 3.0)                   # Helper Temporary Variable
+                N = sqrt(3) * sin(k / 3.0)    # Helper Temporary Variable
+                P = (B / (3.0 * A)) * -1                # Helper Temporary Variable
+
+                x1 = 2 * j * math.cos(k / 3.0) - (B / (3.0 * A))
+                x2 = L * (M + N) + P
+                x3 = L * (M - N) + P
+
+                solutions = [x1, x2, x3]           # Returning Real Roots as numpy array.
+            elif h > 0:                                 # One Real Root and two Complex Roots
+                #debug("1 Solution reelle")
+                R = -(g / 2.0) + math.sqrt(h)           # Helper Temporary Variable
+                if R >= 0:
+                    S = R ** (1 / 3.0)                  # Helper Temporary Variable
+                else:
+                    S = (-R) ** (1 / 3.0) * -1          # Helper Temporary Variable
+                T = -(g / 2.0) - math.sqrt(h)
+                if T >= 0:
+                    U = (T ** (1 / 3.0))                # Helper Temporary Variable
+                else:
+                    U = ((-T) ** (1 / 3.0)) * -1        # Helper Temporary Variable
+
+                x1 = (S + U) - (B / (3.0 * A))
+                #debug(x1)
+                #x2 = -(S + U) / 2 - (b / (3.0 * a)) + (S - U) * math.sqrt(3) * 0.5j
+                #x3 = -(S + U) / 2 - (b / (3.0 * a)) - (S - U) * math.sqrt(3) * 0.5j
+
+                solutions = [x1]           # Returning One Real Root and two Complex Roots as numpy array.
+
+            for t in solutions:
+                if(0<=t<=1):
+                     intersec.append((1-t)**3*P_0 + 3*t*(1-t)**2*P_1 + 3*t**2*(1-t)*P_2 + t**3*P_3)  
+                     
+            return intersec
+            
+            
+            
+            
+    def convertIntColor2Hex(self, i):
+    	return "#"+("00000000"+hex(int(i))[2:])[-8:-2]
+        
 if __name__ == '__main__':
     Hachures().run()

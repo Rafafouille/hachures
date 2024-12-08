@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="19.743464mm"
+   height="13.43233mm"
+   viewBox="0 0 19.743464 13.43233"
+   version="1.1"
+   id="svg1311"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="bronze.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1313"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="mm"
+     showgrid="false"
+     fit-margin-top="0"
+     fit-margin-left="0"
+     fit-margin-right="0"
+     fit-margin-bottom="0"
+     inkscape:zoom="3.9408307"
+     inkscape:cx="35.652382"
+     inkscape:cy="33.876106"
+     inkscape:window-width="1850"
+     inkscape:window-height="1016"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1308" />
+  <g
+     inkscape:label="Calque 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-89.254867,-122.41427)">
+    <path
+       id="rect851-6"
+       style="fill:none;stroke:#000000;stroke-width:0.5;stop-color:#000000"
+       d="M 89.504867,122.66427 H 108.74833 V 135.5966 H 89.504867 Z"
+       inkscape:export-filename="/home/raf/.config/inkscape/extensions/hachures/images/acier.png"
+       inkscape:export-xdpi="300"
+       inkscape:export-ydpi="300" />
+    <path
+       d="M 89.5049 127.314 L 97.5597 122.664 M 89.5049 133.088 L 107.56 122.664 M 95.1591 135.597 L 108.748 127.751 M 105.159 135.597 L 108.748 133.525"
+       style="fill:none;stroke:#000000;stroke-linecap:round;stroke-width:0.20000000298023224"
+       id="path911" />
+    <path
+       d="M 89.5049 124.428 L 92.5597 122.664 M 89.5049 130.201 L 102.56 122.664 M 90.1591 135.597 L 108.748 124.865 M 100.159 135.597 L 108.748 130.638"
+       style="fill:none;stroke:#000000;stroke-dasharray:2.5,2.5;stroke-linecap:butt;stroke-width:0.20000000298023224"
+       id="path913" />
+  </g>
+</svg>
