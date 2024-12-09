@@ -135,8 +135,8 @@ class Hachures(inkex.EffectExtension):
                     listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
                     self.traceHachureEntreIntersections(self.HACHURES_SORTIE,listeIntersections)
                     # Poitillés
-                    P1 = self.ex*Xmin+self.ey*(Y+self.options.periode*self.options.espace_aluminium/100.*self.options.periode)
-                    P2 = self.ex*Xmax+self.ey*(Y+self.options.periode*self.options.espace_aluminium/100.*self.options.periode)
+                    P1 = self.ex*Xmin+self.ey*(Y+self.options.periode*self.options.espace_aluminium/100.)
+                    P2 = self.ex*Xmax+self.ey*(Y+self.options.periode*self.options.espace_aluminium/100.)
                     listeIntersections = self.getIntersections(P1,P2,objetCheminSelection)
                     self.traceHachureEntreIntersections(self.HACHURES_SORTIE,listeIntersections)
                 objetCheminHachure = PathElement.new(self.HACHURES_SORTIE)
