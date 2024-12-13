@@ -24,7 +24,7 @@ class Hachures(inkex.EffectExtension):
     	# Parametres communs
         pars.add_argument("--periode", type=float, default=5.0, help="Période d'espacement des hachures principales")
         pars.add_argument("--offset", type=float, default=0.0, help="Décallage des hachures")
-        pars.add_argument("--periode_unite", type=str, default="mm", help="Unité des longueurs")
+        pars.add_argument("--unite", type=str, default="mm", help="Unité des longueurs")
         pars.add_argument("--angle", type=float, default=45.0, help="Orientation des hachures")
         pars.add_argument("--epaisseur", type=float, default=0.25, help="Épaisseur du trait")
         pars.add_argument("--couleur", type=int, default=0, help="Couleur des lignes")
@@ -43,19 +43,44 @@ class Hachures(inkex.EffectExtension):
     # =====================================================
     def effect(self): # Fonction qui "modifie" le code SVG
     
+        self.DEBUG = False # Pour moi...
+        
         #Conversion des couleurs dans un format correct
         self.options.couleur = self.convertIntColor2Hex(self.options.couleur)
+        # Conversion des unités
+        self.options.periode = self.svg.unittouu(str(self.options.periode)+self.options.unite);
+        self.options.offset = self.svg.unittouu(str(self.options.offset)+self.options.unite);
+        self.options.epaisseur = self.svg.unittouu(str(self.options.epaisseur)+self.options.unite);
     
         # Éléments utiles ---------------------------
         svg = self.svg # Ref vers l'objet dessin entier
         layer = self.svg.get_current_layer()	# Calque courant
-        selection = [svg.getElementById(self.options.ids[i]).to_path_element() for i in range(len(self.options.ids))]	# Liste des éléments sélectionnés 
         
-        # Fusion des figures
+        # Conversion en chemin (par exemple rectangle --> chemin, ellipse --> chemin, etc.)
+        listeObjetsSelectionnes = []
+        for i in range(len(self.options.ids)):
+            idElementBrute = self.options.ids[i]
+            elementBrute = svg.getElementById(idElementBrute).copy()
+            # Petit pb : les rectangles et les ellipses ne sont pas dans la bonne unité : on va appliquer une échelle pour les ramener dans la bonne unité
+            #if(elementBrute.tag == inkex.addNS('rect', 'svg')):
+            #    self.debug("C'est un rectangle !!!")
+            #    self.updateCoordonneesRectangleDansLaBonneUnite(elementBrute)
+            elementConvertiEnChemin = elementBrute.to_path_element()
+            elementConvertiEnChemin.apply_transform() # On "met à plat" les transformations, directement sur les coordonnées des noeuds
+            listeObjetsSelectionnes.append(elementConvertiEnChemin)
+        #selection = [svg.getElementById(self.options.ids[i]).to_path_element() for i in range(len(self.options.ids))]	# Liste des éléments sélectionnés 
+        
+        
+        
+        
+        #self.debug(svg.getElementById(self.options.ids[0]).get_path())
+        #self.debug(listeObjetsSelectionnes[0].get_path())
+        
+        # Fusion des figures (Si l'option est sélectionnée)
         if(self.options.groupe_figure == "combo"):
-            while len(selection)>1:
-                selection[0].attrib["d"] += " "+selection[-1].attrib["d"]
-                selection.pop(-1)
+            while len(listeObjetsSelectionnes)>1:
+                listeObjetsSelectionnes[0].attrib["d"] += " "+listeObjetsSelectionnes[-1].attrib["d"]
+                listeObjetsSelectionnes.pop(-1)
                 
         
         
@@ -63,7 +88,6 @@ class Hachures(inkex.EffectExtension):
         self.style_tirets_bronze = {'fill' : 'none', 'stroke' : self.options.couleur,'stroke-width' : str(self.options.epaisseur), 'stroke-linecap':'butt', 'stroke-dasharray':str(0.01*self.options.longueur_tiret_cuivre*self.options.periode)+","+str(0.01*self.options.longueur_espace_cuivre*self.options.periode)} # Style par defaut
         
         
-        self.DEBUG = False # Pour moi...
         
 
 
@@ -74,7 +98,7 @@ class Hachures(inkex.EffectExtension):
         self.HACHURES_SORTIE = Path()
         self.HACHURES_SORTIE2 = Path()
 
-        # Création du repère penché -------------------------------
+        # Création du repère penché (DEBUG)-------------------------------
         self.ex = np.array([math.cos(self.theta),math.sin(self.theta)]) # Axe parallele aux hachures
         self.ey = np.array([-math.sin(self.theta),math.cos(self.theta)]) # Axe perpendiculare aux hachures
         self.repere = [self.ex,self.ey]
@@ -84,8 +108,13 @@ class Hachures(inkex.EffectExtension):
 
 
         # Pour chaque figure ,on fait les hachures
-        for i in range(len(selection)): # Pour chaque objet sélectionné
-            cheminSelection = selection[i]#elementSelection.to_path_element()
+        for i in range(len(listeObjetsSelectionnes)): # Pour chaque objet sélectionné
+        
+            if(self.options.groupe_figure != "combo"): # Si objects différents, on recrée des hachures de zero à chaque fois
+                self.HACHURES_SORTIE = Path()
+                self.HACHURES_SORTIE2 = Path()
+        
+            cheminSelection = listeObjetsSelectionnes[i]#elementSelection.to_path_element()
 
             # On cherche la place qu'il prend (rectangle bounding box)
             Ymin,Ymax = self.getYminYmax(cheminSelection)
@@ -417,9 +446,45 @@ class Hachures(inkex.EffectExtension):
             
             
             
-            
     def convertIntColor2Hex(self, i):
     	return "#"+("00000000"+hex(int(i))[2:])[-8:-2]
+    	
+    	
+    	
+    def updateCoordonneesRectangleDansLaBonneUnite(self, rect):
+        # Récupérer les dimensions et positions du rectangle
+        x = float(rect.get('x', '0'))  # Par défaut à 0 si absent
+        y = float(rect.get('y', '0'))
+        width = float(rect.get('width', '0'))
+        height = float(rect.get('height', '0'))
+        rx = float(rect.get('rx', '0'))  # Coins arrondis, par défaut 0
+        ry = float(rect.get('ry', '0'))
+        
+        self.debug(x)
+        self.debug(y)
+        
+        
+        # Récupérer les unités actuelles du document
+        unit = self.svg.unit  # Exemple : 'mm', 'px', etc.
+        self.debug(unit)
+        scale_factor = self.svg.uutounit(1, "px")  # Conversion de 1 px vers l'unité actuelle
+        self.debug("Facteur = "+str(scale_factor))
+        
+        # Convertir les dimensions en pixels (ou dans l'unité du document)
+        x /= scale_factor #self.svg.unittouu(x)
+        y /= scale_factor # self.svg.unittouu(y)
+        width  /= scale_factor # self.svg.unittouu(width)
+        height /= scale_factor # self.svg.unittouu(height)
+        rx /= scale_factor # self.svg.unittouu(rx)
+        ry /= scale_factor # self.svg.unittouu(ry)
+        
+        self.debug(x)
+        self.debug(y)
+        
+        #rect.set('x',str(x))
+        #rect.set('y',str(y))
+        
+
         
 if __name__ == '__main__':
     Hachures().run()

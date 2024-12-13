@@ -21,7 +21,7 @@
 		        <page name="parametres_dimensions" gui-text="Dimensions">
     		        <param name="periode" type="float" min="0.01" max="10000" precision="2" gui-text="Période d'espacement des hachures principales :">5</param>
     		        <param name="offset" type="float" min="-1000" max="1000" precision="2" gui-text="Décalage :">0</param>
-		            <param name="periode_unite" type="enum" gui-text="Unité (pour tout) :">
+		            <param name="unite" type="enum" gui-text="Unité (pour tout) :">
 									        <item value="mm">mm</item>
 									        <item value="px">px</item>
 									        <item value="pt">pt</item>
