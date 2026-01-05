@@ -139,6 +139,9 @@ def _tokenize_path(pathdef):
 
 
 def parse_path(pathdef):
+    # Compatibilité Inkscape >= 1.2
+    if not isinstance(pathdef, (str, bytes)):
+        pathdef = str(pathdef)
     segments = path.Path()
     start_pos = None
     last_command = None

@@ -328,9 +328,13 @@ class Hachures(inkex.EffectExtension):
         #P1 et P2 = extrémités max de la hachure.
         # PA et PB = extremités du segment
 
-        if(np.cross((P2-P1),(PA-PB))==0):
+        def pseudocross2d(a, b):
+            # Pseudo-produit vectoriel - scalaire 2D - compatible NumPy 2.x (avant on utilisait np.cross)
+            return a[0]*b[1] - a[1]*b[0]
+            
+        if(pseudocross2d((P2-P1),(PA-PB))==0):
             return False
-        return (np.cross((P1-P2),(PA-P1))*np.cross((P1-P2),(PB-P1))<0) #and (np.cross((PB-PA),(P2-PA))*np.cross((PB-PA),(P1-PA))<0)
+        return (pseudocross2d((P1-P2),(PA-P1))*pseudocross2d((P1-P2),(PB-P1))<0) #and (pseudocross2d((PB-PA),(P2-PA))*pseudocross2d((PB-PA),(P1-PA))<0)
       
     def getIntersectionLignes(self,P1,P2,PA,PB):
         # Résultat du système : P1C ^ P1P2 = 0 et PAC ^ PAPB = 0
